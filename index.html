@@ -9,41 +9,57 @@
 <body>
     <div class="container">
         <h1>Mandelbrot Set Visualization</h1>
-        <div class="controls">
-            <div class="mode-switch">
-                <label>
-                    <input type="radio" name="interaction-mode" id="mode-pan" value="pan" checked>
-                    Pan
-                </label>
-                <label>
-                    <input type="radio" name="interaction-mode" id="mode-select" value="select">
-                    Select Area
-                </label>
+        <div class="controls-container">
+            <div class="controls-panel">
+                <div class="control-section">
+                    <h3>Navigation</h3>
+                    <div class="mode-switch control-group">
+                        <div class="radio-option">
+                            <input type="radio" name="interaction-mode" id="mode-pan" value="pan" checked>
+                            <label for="mode-pan">Pan</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" name="interaction-mode" id="mode-select" value="select">
+                            <label for="mode-select">Select Area</label>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button id="reset" class="control-button">Reset View</button>
+                        <button id="fullscreen" class="control-button"><span>Fullscreen</span></button>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <h3>Appearance</h3>
+                    <div class="control-group slider-group">
+                        <label for="iterations">Max Iterations:</label>
+                        <div class="slider-with-value">
+                            <input type="range" id="iterations" min="20" max="1000" value="100" step="10">
+                            <span id="iterations-value">100</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label for="color-scheme">Color Scheme:</label>
+                        <select id="color-scheme">
+                            <option value="rainbow">Rainbow</option>
+                            <option value="grayscale">Grayscale</option>
+                            <option value="fire">Fire</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="control-section instructions-section">
+                    <p class="instructions-text">Mouse controls: Click and drag to pan or select area (based on mode), scroll to zoom in/out</p>
+                </div>
             </div>
-            <div class="control-group">
-                <label for="iterations">Max Iterations:</label>
-                <input type="range" id="iterations" min="20" max="1000" value="100" step="10">
-                <span id="iterations-value">100</span>
-            </div>
-            <div class="control-group">
-                <label for="color-scheme">Color Scheme:</label>
-                <select id="color-scheme">
-                    <option value="rainbow">Rainbow</option>
-                    <option value="grayscale">Grayscale</option>
-                    <option value="fire">Fire</option>
-                </select>
-            </div>
-            <button id="reset">Reset View</button>
-            <button id="fullscreen"><span>Fullscreen</span></button>
+            
+            <button id="show-math" class="math-button">Show Mathematical Explanation</button>
         </div>
         <div id="container">
             <canvas id="mandelbrot-canvas"></canvas>
             <div id="coordinates-tooltip" class="tooltip"></div>
         </div>
-        <div class="instructions">
-            <p>Mouse controls: Click and drag to pan or select area (based on mode), scroll to zoom in/out</p>
-            <button id="show-math" class="math-button">Show Mathematical Explanation</button>
-        </div>
+
         
         <div class="math-explanation">
             <h2>The Mathematics of the Mandelbrot Set</h2>

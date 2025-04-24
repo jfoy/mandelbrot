@@ -434,18 +434,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Toggle fullscreen mode when the fullscreen button is clicked
     fullscreenButton.addEventListener('click', () => {
-        document.body.classList.toggle('fullscreen-active');
-        canvasContainer.classList.toggle('fullscreen');
+        // Get the container that holds the canvas
+        const canvasContainer = document.getElementById('container');
         
-        // Force re-render after a short delay to account for resize transition
-        setTimeout(() => {
-            mandelbrot.renderer.render();
-        }, 100);
+        if (canvasContainer) {
+            document.body.classList.toggle('fullscreen-active');
+            canvasContainer.classList.toggle('fullscreen');
+            
+            // Force re-render after a short delay to account for resize transition
+            setTimeout(() => {
+                mandelbrot.renderer.render();
+            }, 100);
+        }
     });
     
     // Handle fullscreen exit via Escape key
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && canvasContainer.classList.contains('fullscreen')) {
+        // Get the container that holds the canvas
+        const canvasContainer = document.getElementById('container');
+        
+        if (canvasContainer && e.key === 'Escape' && canvasContainer.classList.contains('fullscreen')) {
             document.body.classList.remove('fullscreen-active');
             canvasContainer.classList.remove('fullscreen');
             
