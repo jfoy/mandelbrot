@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbrot Set Visualization</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Mandelbrot Set Visualization</h1>
+        <div class="controls">
+            <div class="mode-switch">
+                <label>
+                    <input type="radio" name="interaction-mode" id="mode-pan" value="pan" checked>
+                    Pan
+                </label>
+                <label>
+                    <input type="radio" name="interaction-mode" id="mode-select" value="select">
+                    Select Area
+                </label>
+            </div>
+            <div class="control-group">
+                <label for="iterations">Max Iterations:</label>
+                <input type="range" id="iterations" min="20" max="1000" value="100" step="10">
+                <span id="iterations-value">100</span>
+            </div>
+            <div class="control-group">
+                <label for="color-scheme">Color Scheme:</label>
+                <select id="color-scheme">
+                    <option value="rainbow">Rainbow</option>
+                    <option value="grayscale">Grayscale</option>
+                    <option value="fire">Fire</option>
+                </select>
+            </div>
+            <button id="reset">Reset View</button>
+            <button id="fullscreen"><span>Fullscreen</span></button>
+        </div>
+        <div class="canvas-container">
+            <canvas id="mandelbrot-canvas"></canvas>
+        </div>
+        <div class="instructions">
+            <p>Mouse controls: Click and drag to pan or select area (based on mode), scroll to zoom in/out</p>
+        </div>
+    </div>
+    <script src="dist/main.js"></script>
+</body>
+</html>

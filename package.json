@@ -1,0 +1,26 @@
+{
+  "name": "mandelbrot-visualization",
+  "version": "1.0.0",
+  "description": "A TypeScript implementation of the Mandelbrot set visualization",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch",
+    "start": "webpack serve --mode development --open"
+  },
+  "keywords": [
+    "mandelbrot",
+    "fractals",
+    "typescript",
+    "visualization"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "ts-loader": "^9.4.2",
+    "typescript": "^5.0.4",
+    "webpack": "^5.81.0",
+    "webpack-cli": "^5.0.2",
+    "webpack-dev-server": "^4.13.3"
+  }
+}
