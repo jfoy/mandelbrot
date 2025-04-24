@@ -1,5 +1,13 @@
 const path = require('path');
 
+// Custom loader for .glsl shader files
+const shaderLoader = {
+  test: /\.glsl$/,
+  use: {
+    loader: 'webpack-glsl-loader'
+  }
+};
+
 module.exports = {
   entry: './src/index.ts',
   module: {
@@ -9,6 +17,7 @@ module.exports = {
         use: 'ts-loader',
         exclude: /node_modules/,
       },
+      shaderLoader,
     ],
   },
   resolve: {

@@ -1,10 +1,5 @@
 // Main entry point for the Mandelbrot set visualization
-
-// Configuration options
-interface MandelbrotConfig {
-    maxIterations: number;
-    colorScheme: string;
-}
+import { WebGLMandelbrotRenderer, WebGLMandelbrotConfig, ColorScheme } from './webgl-renderer';
 
 // Enum for interaction modes
 enum InteractionMode {
@@ -12,14 +7,10 @@ enum InteractionMode {
     Select = 'select'
 }
 
-// Class to handle the Mandelbrot set calculation and visualization
+// Class to handle the Mandelbrot set visualization and interaction
 class MandelbrotSet {
     private canvas: HTMLCanvasElement;
-    private ctx: CanvasRenderingContext2D;
-    private config: MandelbrotConfig;
-    private viewportX: number = -0.5;
-    private viewportY: number = 0;
-    private zoom: number = 1;
+    public renderer: WebGLMandelbrotRenderer;
     private isDragging: boolean = false;
     private lastX: number = 0;
     private lastY: number = 0;
@@ -27,39 +18,36 @@ class MandelbrotSet {
     private selectionStart: { x: number, y: number } | null = null;
     private selectionRect: HTMLDivElement | null = null;
     
-    constructor(canvasId: string, config: MandelbrotConfig) {
+    constructor(canvasId: string, config: { maxIterations: number, colorScheme: string }) {
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-        const ctx = this.canvas.getContext('2d');
-        if (!ctx) {
-            throw new Error('Could not get canvas context');
-        }
-        this.ctx = ctx;
-        this.config = config;
         
-        // Set canvas dimensions to match display size
-        this.resize();
+        // Convert string colorScheme to enum ColorScheme
+        const colorSchemeEnum = this.getColorSchemeEnum(config.colorScheme);
+        
+        // Create WebGL renderer
+        const webglConfig: WebGLMandelbrotConfig = {
+            maxIterations: config.maxIterations,
+            colorScheme: colorSchemeEnum
+        };
+        
+        this.renderer = new WebGLMandelbrotRenderer(this.canvas, webglConfig);
         
         // Add event listeners for interactivity
         this.setupEventListeners();
         
         // Initial render
-        this.render();
+        this.renderer.render();
     }
     
-    private resize(): void {
-        const canvasContainer = this.canvas.parentElement;
-        if (!canvasContainer) return;
-        
-        const displayWidth = canvasContainer.clientWidth;
-        const displayHeight = canvasContainer.clientHeight;
-        
-        // Set canvas dimensions to match container size for better rendering
-        this.canvas.width = displayWidth;
-        this.canvas.height = displayHeight;
-        
-        // Re-render with new dimensions
-        this.render();
+    private getColorSchemeEnum(schemeName: string): ColorScheme {
+        switch (schemeName) {
+            case 'grayscale': return ColorScheme.Grayscale;
+            case 'fire': return ColorScheme.Fire;
+            default: return ColorScheme.Rainbow;
+        }
     }
+    
+    // Not needed anymore as the WebGL renderer handles resizing internally
     
     private createSelectionRectangle(): HTMLDivElement {
         const canvasContainer = this.canvas.parentElement;
@@ -108,12 +96,15 @@ class MandelbrotSet {
         const centerX = (startX + endX) / 2;
         const centerY = (startY + endY) / 2;
         
-        // Convert to fractal coordinates
+        // Get current viewport values
+        const currentViewport = this.renderer.getViewport();
+        
+        // Convert to fractal coordinates (similar calculation as in the renderer)
         const aspectRatio = this.canvas.width / this.canvas.height;
-        const rangeY = 2.0 / this.zoom;
+        const rangeY = 2.0 / currentViewport.zoom;
         const rangeX = rangeY * aspectRatio;
-        const minX = this.viewportX - rangeX / 2;
-        const minY = this.viewportY - rangeY / 2;
+        const minX = currentViewport.x - rangeX / 2;
+        const minY = currentViewport.y - rangeY / 2;
         const stepX = rangeX / this.canvas.width;
         const stepY = rangeY / this.canvas.height;
         
@@ -127,13 +118,9 @@ class MandelbrotSet {
         const zoomFactorY = this.canvas.height / selectionHeight;
         const zoomFactor = Math.min(zoomFactorX, zoomFactorY);
         
-        // Update viewport and zoom
-        this.viewportX = fractalCenterX;
-        this.viewportY = fractalCenterY;
-        this.zoom *= zoomFactor;
-        
-        // Re-render with new viewport and zoom
-        this.render();
+        // Update viewport and zoom in the renderer
+        this.renderer.updateViewport(fractalCenterX, fractalCenterY);
+        this.renderer.updateZoom(currentViewport.zoom * zoomFactor);
     }
     
     private setupEventListeners(): void {
@@ -141,7 +128,8 @@ class MandelbrotSet {
         const canvasContainer = this.canvas.parentElement;
         if (canvasContainer) {
             const resizeObserver = new ResizeObserver(() => {
-                this.resize();
+                // Trigger re-render when container size changes
+                this.renderer.render();
             });
             resizeObserver.observe(canvasContainer);
         }
@@ -182,19 +170,11 @@ class MandelbrotSet {
                     const deltaX = e.offsetX - this.lastX;
                     const deltaY = e.offsetY - this.lastY;
                     
-                    // Convert screen coordinates to fractal coordinates
-                    const fractalDeltaX = deltaX * (3.0 / this.canvas.width) / this.zoom;
-                    const fractalDeltaY = deltaY * (3.0 / this.canvas.height) / this.zoom;
-                    
-                    // Update viewport
-                    this.viewportX -= fractalDeltaX;
-                    this.viewportY -= fractalDeltaY;
+                    // Use the WebGL renderer to pan
+                    this.renderer.pan(deltaX, deltaY);
                     
                     this.lastX = e.offsetX;
                     this.lastY = e.offsetY;
-                    
-                    // Re-render with new viewport
-                    this.render();
                 } else if (this.interactionMode === InteractionMode.Select && this.selectionStart) {
                     // Update selection rectangle
                     this.updateSelectionRectangle(
@@ -246,156 +226,52 @@ class MandelbrotSet {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
+            // Get current viewport values
+            const viewport = this.renderer.getViewport();
+            
             // Convert to normalized device coordinates (-1 to 1)
             const ndcX = (x / this.canvas.width) * 2 - 1;
             const ndcY = (y / this.canvas.height) * -2 + 1;
             
             // Convert to fractal coordinates
-            const fractalX = this.viewportX + ndcX * (2 / this.zoom);
-            const fractalY = this.viewportY + ndcY * (2 / this.zoom);
+            const fractalX = viewport.x + ndcX * (2 / viewport.zoom);
+            const fractalY = viewport.y + ndcY * (2 / viewport.zoom);
             
             // Determine zoom direction and factor
             const zoomFactor = e.deltaY > 0 ? 0.8 : 1.2;
-            this.zoom *= zoomFactor;
+            const newZoom = viewport.zoom * zoomFactor;
             
             // Adjust viewport to zoom toward mouse position
-            this.viewportX = fractalX - ndcX * (2 / this.zoom);
-            this.viewportY = fractalY - ndcY * (2 / this.zoom);
+            const newViewportX = fractalX - ndcX * (2 / newZoom);
+            const newViewportY = fractalY - ndcY * (2 / newZoom);
             
-            // Re-render with new zoom
-            this.render();
+            // Update in renderer
+            this.renderer.updateViewport(newViewportX, newViewportY);
+            this.renderer.updateZoom(newZoom);
         });
     }
     
-    private calculateMandelbrot(x0: number, y0: number): number {
-        let x = 0;
-        let y = 0;
-        let iteration = 0;
-        const maxIter = this.config.maxIterations;
-        
-        while (x*x + y*y <= 4 && iteration < maxIter) {
-            const xTemp = x*x - y*y + x0;
-            y = 2*x*y + y0;
-            x = xTemp;
-            iteration++;
-        }
-        
-        return iteration;
-    }
+    // These methods are no longer needed as the WebGL renderer handles all the rendering
+    // They are removed to optimize the code
     
-    private getColor(iteration: number): string {
-        // Return color based on the number of iterations and selected color scheme
-        if (iteration === this.config.maxIterations) {
-            return '#000000'; // Black for the Mandelbrot set
+    public updateConfig(config: Partial<{ maxIterations: number, colorScheme: string }>): void {
+        // Convert string colorScheme to enum ColorScheme if provided
+        const updatedConfig: Partial<WebGLMandelbrotConfig> = {};
+        
+        if (config.maxIterations !== undefined) {
+            updatedConfig.maxIterations = config.maxIterations;
         }
         
-        const normalized = iteration / this.config.maxIterations;
-        
-        if (this.config.colorScheme === 'grayscale') {
-            const value = Math.floor(normalized * 255);
-            return `rgb(${value}, ${value}, ${value})`;
-        } else if (this.config.colorScheme === 'fire') {
-            const red = Math.min(255, Math.floor(normalized * 510));
-            const green = Math.min(255, Math.floor(normalized * 140));
-            const blue = Math.floor(normalized * 40);
-            return `rgb(${red}, ${green}, ${blue})`;
-        } else {
-            // Rainbow (default)
-            const hue = 360 * normalized;
-            return `hsl(${hue}, 100%, 50%)`;
-        }
-    }
-    
-    public render(): void {
-        const { width, height } = this.canvas;
-        const imageData = this.ctx.createImageData(width, height);
-        const data = imageData.data;
-        
-        // Define the range of the complex plane to render
-        const aspectRatio = width / height;
-        const rangeY = 2.0 / this.zoom;
-        const rangeX = rangeY * aspectRatio;
-        
-        // Calculate the top-left and bottom-right corners of the viewport
-        const minX = this.viewportX - rangeX / 2;
-        const maxX = this.viewportX + rangeX / 2;
-        const minY = this.viewportY - rangeY / 2;
-        const maxY = this.viewportY + rangeY / 2;
-        
-        // Calculate step sizes for moving through the complex plane
-        const stepX = (maxX - minX) / width;
-        const stepY = (maxY - minY) / height;
-        
-        // Render the Mandelbrot set
-        for (let y = 0; y < height; y++) {
-            const cy = minY + y * stepY;
-            
-            for (let x = 0; x < width; x++) {
-                const cx = minX + x * stepX;
-                
-                // Calculate number of iterations for this point
-                const iteration = this.calculateMandelbrot(cx, cy);
-                
-                // Get color for the pixel
-                const colorStr = this.getColor(iteration);
-                const matches = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-                
-                let r = 0, g = 0, b = 0;
-                
-                if (matches) {
-                    [, r, g, b] = matches.map(Number);
-                } else if (colorStr.startsWith('hsl')) {
-                    // Convert HSL to RGB
-                    const hsl = colorStr.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-                    if (hsl) {
-                        const h = Number(hsl[1]) / 360;
-                        const s = Number(hsl[2]) / 100;
-                        const l = Number(hsl[3]) / 100;
-                        
-                        const hueToRgb = (p: number, q: number, t: number) => {
-                            if (t < 0) t += 1;
-                            if (t > 1) t -= 1;
-                            if (t < 1/6) return p + (q - p) * 6 * t;
-                            if (t < 1/2) return q;
-                            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                            return p;
-                        };
-                        
-                        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                        const p = 2 * l - q;
-                        
-                        r = Math.round(hueToRgb(p, q, h + 1/3) * 255);
-                        g = Math.round(hueToRgb(p, q, h) * 255);
-                        b = Math.round(hueToRgb(p, q, h - 1/3) * 255);
-                    }
-                } else if (colorStr === '#000000') {
-                    r = g = b = 0;
-                }
-                
-                // Set pixel color in the image data
-                const pixelIndex = (y * width + x) * 4;
-                data[pixelIndex] = r;     // Red
-                data[pixelIndex + 1] = g; // Green
-                data[pixelIndex + 2] = b; // Blue
-                data[pixelIndex + 3] = 255; // Alpha (fully opaque)
-            }
+        if (config.colorScheme !== undefined) {
+            updatedConfig.colorScheme = this.getColorSchemeEnum(config.colorScheme);
         }
         
-        // Draw the image data to the canvas
-        this.ctx.putImageData(imageData, 0, 0);
-    }
-    
-    public updateConfig(config: Partial<MandelbrotConfig>): void {
-        this.config = { ...this.config, ...config };
-        this.render();
+        this.renderer.updateConfig(updatedConfig);
     }
     
     public resetView(): void {
-        this.viewportX = -0.5;
-        this.viewportY = 0;
-        this.zoom = 1;
         this.removeSelectionRectangle();
-        this.render();
+        this.renderer.resetView();
     }
 }
 
@@ -411,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvasContainer = document.querySelector('.canvas-container') as HTMLElement;
     
     // Initial configuration
-    const config: MandelbrotConfig = {
+    const config = {
         maxIterations: parseInt(iterationsSlider.value, 10),
         colorScheme: colorSchemeSelect.value
     };
@@ -445,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Force re-render after a short delay to account for resize transition
         setTimeout(() => {
-            mandelbrot.render();
+            mandelbrot.renderer.render();
         }, 100);
     });
     
@@ -457,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Force re-render after a short delay
             setTimeout(() => {
-                mandelbrot.render();
+                mandelbrot.renderer.render();
             }, 100);
         }
     });
