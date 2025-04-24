@@ -41,6 +41,48 @@
         </div>
         <div class="instructions">
             <p>Mouse controls: Click and drag to pan or select area (based on mode), scroll to zoom in/out</p>
+            <button id="show-math" class="math-button">Show Mathematical Explanation</button>
+        </div>
+        
+        <div class="math-explanation">
+            <h2>The Mathematics of the Mandelbrot Set</h2>
+            <p>
+                The Mandelbrot set is one of the most famous fractals in mathematics. It's defined as the set of complex numbers 
+                <em>c</em> for which the function <em>f<sub>c</sub>(z) = z² + c</em> does not diverge when iterated from <em>z = 0</em>.
+            </p>
+            <p>
+                Each point in this visualization represents a complex number <em>c = a + bi</em>, where:
+                <ul>
+                    <li>The horizontal position represents the real part (<em>a</em>)</li>
+                    <li>The vertical position represents the imaginary part (<em>b</em>)</li>
+                </ul>
+            </p>
+            <p>
+                Starting with <em>z₀ = 0</em>, we compute the sequence:
+                <br>
+                <em>z₁ = z₀² + c</em>
+                <br>
+                <em>z₂ = z₁² + c</em>
+                <br>
+                <em>z₃ = z₂² + c</em>
+                <br>
+                ...
+            </p>
+            <p>
+                If this sequence remains bounded (|z<sub>n</sub>| ≤ 2 for all n), then <em>c</em> is in the Mandelbrot set (colored black).
+                Otherwise, the point is colored based on how quickly the sequence escapes the boundary.
+            </p>
+            <p>
+                Key regions to explore:
+                <ul>
+                    <li><strong>Main Cardioid:</strong> The heart-shaped region in the center</li>
+                    <li><strong>Period Bulbs:</strong> The circular regions attached to the main cardioid</li>
+                    <li><strong>Seahorse Valley:</strong> Around coordinates (-0.75, 0.1)</li>
+                    <li><strong>Elephant Valley:</strong> Around coordinates (0.3, 0)</li>
+                    <li><strong>Mini Mandelbrots:</strong> Smaller copies of the entire set found throughout the fractal</li>
+                </ul>
+            </p>
+            <button id="toggle-math">Hide Mathematical Explanation</button>
         </div>
     </div>
     <script src="dist/main.js"></script>

@@ -111,8 +111,90 @@ canvas {
 .instructions {
     text-align: center;
     margin-top: 10px;
+    margin-bottom: 15px;
     font-style: italic;
     color: #7f8c8d;
+}
+
+.math-button {
+    display: inline-block;
+    margin: 10px 5px;
+    padding: 6px 12px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    font-style: normal;
+}
+
+.math-button:hover {
+    background-color: #2980b9;
+}
+
+/* Hide the show button when math is visible */
+#show-math {
+    display: none;
+}
+
+.math-hidden #show-math {
+    display: inline-block;
+}
+
+.math-explanation {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+}
+
+.math-explanation h2 {
+    color: #2c3e50;
+    font-size: 1.5em;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.math-explanation p {
+    margin-bottom: 15px;
+}
+
+.math-explanation ul {
+    margin-left: 20px;
+    margin-bottom: 10px;
+}
+
+.math-explanation li {
+    margin-bottom: 5px;
+}
+
+#toggle-math {
+    display: block;
+    margin: 10px auto;
+    padding: 8px 16px;
+    background-color: #2c3e50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    font-style: normal;
+}
+
+#toggle-math:hover {
+    background-color: #1a2530;
+}
+
+.math-hidden .math-explanation {
+    display: none;
 }
 
 .selection-rectangle {

@@ -10,15 +10,31 @@ void main() {
 }
 `;
 
+/**
+ * Fragment shader for rendering the Mandelbrot set.
+ * 
+ * The Mandelbrot set is defined as the set of complex numbers c for which the function
+ * f_c(z) = z² + c does not diverge when iterated from z = 0.
+ * 
+ * Mathematically, a complex number c is in the Mandelbrot set if and only if
+ * |f_c^n(0)| ≤ 2 for all n > 0, where f_c^n represents the nth iteration of f_c.
+ * 
+ * In this implementation:
+ * 1. We map each pixel to a point c in the complex plane
+ * 2. We iterate z₀ = 0, z_{n+1} = z_n² + c until either:
+ *    a. |z_n| > 2 (the point diverges and is not in the set), or
+ *    b. We reach the maximum iteration count (the point is likely in the set)
+ * 3. We color based on how quickly the sequence diverged (if it did)
+ */
 const fragmentShaderSource = `
 precision highp float;
 
 // Uniforms passed from JavaScript
-uniform vec2 u_viewport_center; // Center point of the viewport in Mandelbrot coordinates
-uniform float u_zoom;           // Zoom level
-uniform vec2 u_resolution;      // Canvas resolution (width, height)
-uniform int u_max_iterations;   // Maximum iterations
-uniform int u_color_scheme;     // 0 = rainbow, 1 = grayscale, 2 = fire
+uniform vec2 u_viewport_center; // Center point (c_x, c_y) in the complex plane
+uniform float u_zoom;           // Zoom level (higher values = more zoomed in)
+uniform vec2 u_resolution;      // Canvas resolution (width, height) in pixels
+uniform int u_max_iterations;   // Maximum iterations before assuming the point is in the set
+uniform int u_color_scheme;     // Color scheme selection (0 = rainbow, 1 = grayscale, 2 = fire)
 
 // HSL to RGB conversion
 vec3 hsl2rgb(float h, float s, float l) {
@@ -44,77 +60,106 @@ vec3 hsl2rgb(float h, float s, float l) {
     return rgb + vec3(m);
 }
 
-// Get color based on iteration count and color scheme
+/**
+ * Determine the color of a point based on its escape behavior.
+ * 
+ * Points in the Mandelbrot set (that never escape) are colored black.
+ * Points outside the set are colored based on how quickly they escape,
+ * creating bands of color that reveal the complex structure of the boundary.
+ * 
+ * The normalized iteration count creates a smooth gradient between colors,
+ * where points that escape quickly are colored differently than those that
+ * take many iterations to escape.
+ */
 vec4 getColor(float iteration, int maxIterations) {
+    // Points that don't escape within max_iterations are considered to be in the set
     if (iteration >= float(maxIterations)) {
         return vec4(0.0, 0.0, 0.0, 1.0); // Black for points in the set
     }
     
+    // Normalize the iteration count to a value between 0 and 1
+    // This creates a smooth gradient based on how quickly points escape
     float normalized = iteration / float(maxIterations);
     
     if (u_color_scheme == 1) {
-        // Grayscale
+        // Grayscale - simpler visualization where brightness corresponds to escape time
         return vec4(vec3(normalized), 1.0);
     } else if (u_color_scheme == 2) {
-        // Fire
+        // Fire - creates a hot, fiery appearance with emphasis on reds and yellows
         float red = min(1.0, normalized * 2.0);
         float green = min(1.0, normalized * 0.6);
         float blue = normalized * 0.15;
         return vec4(red, green, blue, 1.0);
     } else {
-        // Rainbow (default)
+        // Rainbow (default) - maps the full color spectrum to escape time
+        // This provides the most detailed view of the set's structure
         float hue = 360.0 * normalized;
         return vec4(hsl2rgb(hue, 1.0, 0.5), 1.0);
     }
 }
 
 void main() {
-    // Convert pixel coordinates to mandelbrot coordinates
+    // Step 1: Map each pixel to a point in the complex plane (a complex number c)
+    // The complex plane is centered at u_viewport_center with width and height determined by zoom level
     float aspectRatio = u_resolution.x / u_resolution.y;
-    float rangeY = 2.0 / u_zoom;
-    float rangeX = rangeY * aspectRatio;
+    float complexPlaneHeight = 2.0 / u_zoom;          // Height of our viewport in the complex plane
+    float complexPlaneWidth = complexPlaneHeight * aspectRatio; // Width adjusted for aspect ratio
     
+    // Convert from pixel coordinates to UV coordinates (0 to 1)
     vec2 uv = gl_FragCoord.xy / u_resolution;
+    
+    // Map UV coordinates to complex plane coordinates centered at the viewport center
+    // This creates c = (real, imaginary) components of our complex number
     vec2 c = u_viewport_center + vec2(
-        (uv.x - 0.5) * rangeX,
-        (uv.y - 0.5) * rangeY
+        (uv.x - 0.5) * complexPlaneWidth,   // Map x from [0,1] to [-width/2, width/2]
+        (uv.y - 0.5) * complexPlaneHeight   // Map y from [0,1] to [-height/2, height/2]
     );
     
-    // Mandelbrot set calculation
-    vec2 z = vec2(0.0, 0.0);
-    float i = 0.0;
-    int iterations = u_max_iterations; // Make a local copy
+    // Step 2: Apply the Mandelbrot iteration: z_{n+1} = z_n² + c starting with z_0 = 0
+    vec2 z = vec2(0.0, 0.0);    // z_0 = 0 (starting value for iteration)
+    float iterCount = 0.0;      // Count how many iterations before escaping
+    int maxIter = u_max_iterations; // Local copy of max iterations
     
     // WebGL 1.0 requires loop conditions to be constant or simple variable comparisons
+    // We use a fixed upper bound and break out when needed
     for (int iter = 0; iter < 1000; iter++) {
-        // Break out if we've reached our iteration limit
-        if (float(iter) >= float(iterations)) break;
-        // z = z^2 + c
+        // Break if we've reached the maximum iteration count
+        if (float(iter) >= float(maxIter)) break;
+        
+        // Calculate z² = (a+bi)² = (a²-b²) + (2ab)i
+        // Where z = a+bi is represented as vec2(a,b)
         vec2 zSquared = vec2(
-            z.x * z.x - z.y * z.y,
-            2.0 * z.x * z.y
+            z.x * z.x - z.y * z.y,  // Real part: a²-b²
+            2.0 * z.x * z.y         // Imaginary part: 2ab
         );
+        
+        // z_{n+1} = z_n² + c
         z = zSquared + c;
         
         // Check if |z| > 2
-        if (dot(z, z) > 4.0) {
-            i = float(iter);
-            break;
+        // We use |z|² > 4 instead of |z| > 2 to avoid a square root calculation
+        // |z|² = a² + b² = dot(z,z)
+        if (dot(z, z) > 4.0) {  // This is the escape condition
+            iterCount = float(iter);
+            break;  // The sequence is diverging, so c is not in the Mandelbrot set
         }
-        i = float(iter);
+        iterCount = float(iter);
     }
     
-    // Smooth coloring
-    if (i < float(u_max_iterations)) {
-        // Log_2(log_2(|z|))
-        float log_zn = log(dot(z, z)) / 2.0;
-        float nu = log(log_zn / log(2.0)) / log(2.0);
+    // Step 3: Apply smooth coloring for better visual quality
+    // Instead of using discrete iteration bands, we apply a logarithmic smoothing
+    if (iterCount < float(maxIter)) {
+        // For smooth coloring, we use: iterCount + 1 - log(log|z_n|)/log(2)
+        // This creates a continuous coloring that removes the discrete "bands"
+        float logZn = log(dot(z, z)) / 2.0;       // log|z_n|
+        float smoothingTerm = log(logZn / log(2.0)) / log(2.0);
         
-        // Subtract the remaining part from the iteration count
-        i = i + 1.0 - nu;
+        // Apply smoothing to the iteration count
+        iterCount = iterCount + 1.0 - smoothingTerm;
     }
     
-    gl_FragColor = getColor(i, u_max_iterations);
+    // Step 4: Color the pixel based on the (smooth) iteration count
+    gl_FragColor = getColor(iterCount, maxIter);
 }
 `;
 

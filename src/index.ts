@@ -324,6 +324,47 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // No need for manual window resize handling as ResizeObserver takes care of it
     
+    // Handle mathematical explanation visibility
+    const toggleMathButton = document.getElementById('toggle-math') as HTMLButtonElement;
+    const showMathButton = document.getElementById('show-math') as HTMLButtonElement;
+    
+    // Function to show the mathematical explanation
+    const showMathExplanation = () => {
+        document.body.classList.remove('math-hidden');
+        if (toggleMathButton) {
+            toggleMathButton.textContent = 'Hide Mathematical Explanation';
+        }
+    };
+    
+    // Function to hide the mathematical explanation
+    const hideMathExplanation = () => {
+        document.body.classList.add('math-hidden');
+        if (toggleMathButton) {
+            toggleMathButton.textContent = 'Show Mathematical Explanation';
+        }
+    };
+    
+    // Toggle button inside the math explanation section
+    if (toggleMathButton) {
+        toggleMathButton.addEventListener('click', () => {
+            const isHidden = document.body.classList.contains('math-hidden');
+            
+            if (isHidden) {
+                showMathExplanation();
+            } else {
+                hideMathExplanation();
+            }
+        });
+    }
+    
+    // Persistent show button in the instructions area
+    if (showMathButton) {
+        showMathButton.addEventListener('click', showMathExplanation);
+    }
+    
+    // Initially hide the math explanation to keep the interface clean
+    hideMathExplanation();
+    
     // Toggle fullscreen mode when the fullscreen button is clicked
     fullscreenButton.addEventListener('click', () => {
         document.body.classList.toggle('fullscreen-active');
