@@ -153,6 +153,11 @@ export class WebGLMandelbrotRenderer {
     private viewportY: number = 0;
     private zoom: number = 1;
     
+    // Dynamic resolution settings
+    private baseResolutionFactor: number = 1.0;
+    private maxResolutionFactor: number = 2.0; // Maximum super-sampling factor
+    private zoomThreshold: number = 100.0;     // Zoom level where we start increasing resolution
+    
     constructor(canvas: HTMLCanvasElement, config: WebGLMandelbrotConfig) {
         console.log('Initializing WebGL renderer with config:', config);
         this.canvas = canvas;
@@ -279,13 +284,24 @@ export class WebGLMandelbrotRenderer {
         console.log('Rendering Mandelbrot set...');
         const gl = this.gl;
         
-        // Set the canvas size to match its display size
-        console.log('Resizing canvas to display size...');
+        // Set the canvas size with dynamic resolution
+        console.log('Resizing canvas with dynamic resolution...');
         this.resizeCanvasToDisplaySize();
         console.log('Canvas dimensions:', { width: gl.canvas.width, height: gl.canvas.height });
         
-        // Set the viewport
+        // Set the viewport to the full canvas size
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        
+        // Apply CSS scaling to match display size (this makes high-resolution canvas display at normal size)
+        const canvas = gl.canvas as HTMLCanvasElement;
+        const resolutionFactor = this.calculateResolutionFactor();
+        if (resolutionFactor > 1.0) {
+            canvas.style.width = `${canvas.clientWidth}px`;
+            canvas.style.height = `${canvas.clientHeight}px`;
+        } else {
+            canvas.style.width = '';
+            canvas.style.height = '';
+        }
         
         // Clear the canvas
         gl.clearColor(0, 0, 0, 0);
@@ -359,15 +375,35 @@ export class WebGLMandelbrotRenderer {
         }
     }
     
-    // Make sure the canvas size matches its display size
+    // Calculate the dynamic resolution factor based on zoom level
+    private calculateResolutionFactor(): number {
+        if (this.zoom <= this.zoomThreshold) {
+            return this.baseResolutionFactor;
+        }
+        
+        // Gradually increase resolution factor as zoom increases
+        const zoomRatio = Math.min(this.zoom / this.zoomThreshold, this.maxResolutionFactor);
+        return Math.min(this.baseResolutionFactor * zoomRatio, this.maxResolutionFactor);
+    }
+    
+    // Make sure the canvas size matches its display size with dynamic resolution scaling
     private resizeCanvasToDisplaySize(): void {
         const canvas = this.gl.canvas as HTMLCanvasElement;
         const displayWidth = canvas.clientWidth;
         const displayHeight = canvas.clientHeight;
         
-        if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-            canvas.width = displayWidth;
-            canvas.height = displayHeight;
+        // Calculate the resolution factor based on current zoom
+        const resolutionFactor = this.calculateResolutionFactor();
+        console.log(`Zoom: ${this.zoom.toExponential(2)}, Resolution factor: ${resolutionFactor.toFixed(2)}`);
+        
+        // Calculate target dimensions with dynamic resolution
+        const targetWidth = Math.floor(displayWidth * resolutionFactor);
+        const targetHeight = Math.floor(displayHeight * resolutionFactor);
+        
+        if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            console.log(`Canvas resized to: ${targetWidth}x${targetHeight} (display: ${displayWidth}x${displayHeight})`);
         }
     }
     

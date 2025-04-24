@@ -223,31 +223,41 @@ class MandelbrotSet {
             
             // Get position of mouse cursor in canvas
             const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // Calculate relative position within the canvas element
+            // This accounts for any resolution scaling in the WebGL renderer
+            const relativeX = (e.clientX - rect.left) / rect.width;
+            const relativeY = (e.clientY - rect.top) / rect.height;
             
             // Get current viewport values
             const viewport = this.renderer.getViewport();
             
-            // Convert to normalized device coordinates (-1 to 1)
-            const ndcX = (x / this.canvas.width) * 2 - 1;
-            const ndcY = (y / this.canvas.height) * -2 + 1;
+            // Calculate the aspect ratio
+            const aspectRatio = this.canvas.clientWidth / this.canvas.clientHeight;
+            const rangeY = 2.0 / viewport.zoom;
+            const rangeX = rangeY * aspectRatio;
             
-            // Convert to fractal coordinates
-            const fractalX = viewport.x + ndcX * (2 / viewport.zoom);
-            const fractalY = viewport.y + ndcY * (2 / viewport.zoom);
+            // Convert to fractal coordinates directly using relative position
+            const fractalX = viewport.x + (relativeX - 0.5) * rangeX;
+            const fractalY = viewport.y + (0.5 - relativeY) * rangeY;
             
             // Determine zoom direction and factor
             const zoomFactor = e.deltaY > 0 ? 0.8 : 1.2;
             const newZoom = viewport.zoom * zoomFactor;
             
-            // Adjust viewport to zoom toward mouse position
-            const newViewportX = fractalX - ndcX * (2 / newZoom);
-            const newViewportY = fractalY - ndcY * (2 / newZoom);
+            // Calculate new ranges after zoom
+            const newRangeY = 2.0 / newZoom;
+            const newRangeX = newRangeY * aspectRatio;
+            
+            // Calculate new viewport center to keep the mouse position fixed
+            const newViewportX = fractalX - (relativeX - 0.5) * newRangeX;
+            const newViewportY = fractalY - (0.5 - relativeY) * newRangeY;
             
             // Update in renderer
             this.renderer.updateViewport(newViewportX, newViewportY);
             this.renderer.updateZoom(newZoom);
+            
+            console.log(`Zoom to mouse at (${relativeX.toFixed(2)}, ${relativeY.toFixed(2)}) - ` +
+                      `New center: (${newViewportX.toExponential(4)}, ${newViewportY.toExponential(4)})`);
         });
     }
     
