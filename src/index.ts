@@ -324,6 +324,73 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // No need for manual window resize handling as ResizeObserver takes care of it
     
+    // Coordinate tooltip functionality
+    const tooltip = document.getElementById('coordinates-tooltip') as HTMLDivElement;
+    
+    // Convert screen coordinates to complex plane coordinates
+    function screenToComplex(x: number, y: number): {real: number, imag: number} {
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        
+        // Get current viewport from renderer
+        const viewport = mandelbrot.renderer.getViewport();
+        const aspectRatio = canvasWidth / canvasHeight;
+        
+        // Calculate the bounds of the current view based on the viewport center and zoom
+        const rangeY = 2.0 / viewport.zoom; // Height in the complex plane
+        const rangeX = rangeY * aspectRatio; // Width in the complex plane
+        
+        // Calculate the min/max coordinates in the complex plane
+        const minReal = viewport.x - (rangeX / 2);
+        const maxReal = viewport.x + (rangeX / 2);
+        const minImag = viewport.y - (rangeY / 2);
+        const maxImag = viewport.y + (rangeY / 2);
+        
+        // Convert from screen coordinates to normalized coordinates (0 to 1)
+        const normalizedX = x / canvasWidth;
+        const normalizedY = y / canvasHeight;
+        
+        // Convert normalized coordinates to complex plane coordinates
+        const real = minReal + normalizedX * (maxReal - minReal);
+        const imag = minImag + normalizedY * (maxImag - minImag);
+        
+        return { real, imag };
+    }
+    
+    // Format number for display with appropriate precision based on zoom level
+    function formatCoordinate(value: number): string {
+        // Get current viewport from renderer
+        const viewport = mandelbrot.renderer.getViewport();
+        
+        // Calculate required decimal places based on zoom level
+        // More decimal places as we zoom in
+        const decimals = Math.max(4, Math.min(15, Math.floor(Math.log10(viewport.zoom)) + 2));
+        return value.toFixed(decimals);
+    }
+    
+    // Handle mouse movement to update tooltip
+    canvas.addEventListener('mousemove', (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        // Convert screen position to complex coordinates
+        const complexCoords = screenToComplex(x, y);
+        
+        // Update tooltip content
+        tooltip.textContent = `c = ${formatCoordinate(complexCoords.real)} + ${formatCoordinate(complexCoords.imag)}i`;
+        
+        // Position the tooltip near the cursor
+        tooltip.style.left = `${event.clientX + 10}px`;
+        tooltip.style.top = `${event.clientY + 10}px`;
+        tooltip.style.display = 'block';
+    });
+    
+    // Hide tooltip when mouse leaves canvas
+    canvas.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+    });
+    
     // Handle mathematical explanation visibility
     const toggleMathButton = document.getElementById('toggle-math') as HTMLButtonElement;
     const showMathButton = document.getElementById('show-math') as HTMLButtonElement;
